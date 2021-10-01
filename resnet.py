@@ -127,9 +127,6 @@ class ResNet(nn.Module):
         return out
 
 
-relu = nn.ReLU()
-
-
 def probabilitify_square(x):
     y = x**2
     return y / y.sum(dim=1, keepdim=True)
