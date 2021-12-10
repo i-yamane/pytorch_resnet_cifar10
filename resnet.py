@@ -89,13 +89,11 @@ class ResNet(nn.Module):
                  num_blocks,
                  n_channels,
                  num_classes: int = 10,
-                 prob_square: bool = False):
+                 last_layer: str = 'identity'):
         super(ResNet, self).__init__()
         self.in_planes = 16
 
-        self.prob_square = prob_square
-
-        # self.conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1, bias=False)
+        self.last_layer = last_layer
         self.conv1 = nn.Conv2d(n_channels, 16, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(16)
         self.layer1 = self._make_layer(block, 16, num_blocks[0], stride=1)
@@ -122,13 +120,34 @@ class ResNet(nn.Module):
         out = F.avg_pool2d(out, out.size()[3])
         out = out.view(out.size(0), -1)
         out = self.linear(out)
-        if self.prob_square:
+        if self.last_layer == 'identity':
+            pass
+        elif self.last_layer == 'prob_square':
             out = probabilitify_square(out)
+        elif self.last_layer == 'prob_abs':
+            out = probabilitify_abs(out)
+        elif self.last_layer == 'sum_to_one':
+            out = make_sum_to_one(out)
+        elif self.last_layer == 'log_softmax':
+            out = out.log_softmax(dim=1)
+        else:
+            raise ValueError('Invalid value for last_layer: {}'.format(self.last_layer))
+
         return out
+
+
+def make_sum_to_one(x):
+    y = x
+    return y / y.sum(dim=1, keepdim=True)
 
 
 def probabilitify_square(x):
     y = x**2
+    return y / y.sum(dim=1, keepdim=True)
+
+
+def probabilitify_abs(x):
+    y = x.abs()
     return y / y.sum(dim=1, keepdim=True)
 
 
